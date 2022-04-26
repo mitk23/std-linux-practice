@@ -1,45 +1,54 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static void do_cat(FILE *f);
+void do_cat(const char *path);
+
 
 int main(int argc, char *argv[]) {
-	if (argc == 1) {
-	       fprintf(stderr, "%s: file name not given\n", argv[0]);
-	       exit(1);
-	} else {
-		int i;
+	int i;
 
-		for (i = 1; i < argc; ++i) {
-			FILE *f;
-
-			f = fopen(argv[i], "r");
-			if (!f) {
-				perror(argv[i]);
-				exit(1);
-			}
-			do_cat(f);
-			if (fclose(f) != EOF) {
-				perror(argv[i]);
-				exit(1);
-			}
-		}
+	if (argc < 2) {
+		fprintf(stderr, "%s: file name not given\n", argv[0]);
+		exit(1);
+	}
+	for (i = 1; i < argc; ++i) {
+		do_cat(argv[i]);
 	}
 	exit(0);
 }
 
 #define CHAR_SIZE sizeof(unsigned char)
-#define BUFFER_SIZE 10 
+#define BUF_SIZE 2048
 
-static void do_cat(FILE *f) {
-	unsigned char buf[BUFFER_SIZE];
-	size_t n_read, n_written;
+void do_cat(const char *path) {
+	FILE *f;
+	unsigned char buf[BUF_SIZE];
+	size_t n_read;
+	size_t n_written;
+
+	f = fopen(path, "r");
+	if (!f) {
+		perror(path);
+		exit(1);
+	}
 
 	for (;;) {
-		n_read = fread(buf, CHAR_SIZE, sizeof buf, f);
-		if (ferror(f) != 0) exit(1);
+		n_read = fread(buf, CHAR_SIZE, BUF_SIZE, f);
+		if (ferror(f) != 0) {
+			perror(path);
+			exit(1);
+		}
 		n_written = fwrite(buf, CHAR_SIZE, n_read, stdout);
-		if (n_written < n_read) exit(1);
-		if (n_read < sizeof buf) break;
+		if (n_written < n_read) {
+			perror(path);
+			exit(1);
+		}
+		if (n_read < BUF_SIZE) break;
+	}
+
+	if (fclose(f) == EOF) {
+		perror(path);
+		exit(1);
 	}
 }
+
